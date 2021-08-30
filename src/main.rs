@@ -36,9 +36,13 @@ fn parse_comma_tags<'input: 'tag, 'tag>(
     tag2: &'tag str,
 ) -> impl Parser<&'input str, (&'input str, &'input str), ()> + 'tag {
     move |input: &'input str| {
-        let (tail, value1) = parse_tag(tag1).parse(input)?;
-        let (tail, _) = parse_tag(", ").parse(tail)?;
-        let (tail, value2) = parse_tag(tag2).parse(tail)?;
+        let mut parse_tag1 = parse_tag(tag1);
+        let mut parse_comma = parse_tag(", ");
+        let mut parse_tag2 = parse_tag(tag2);
+
+        let (tail, value1) = parse_tag1.parse(input)?;
+        let (tail, _) = parse_comma.parse(tail)?;
+        let (tail, value2) = parse_tag2.parse(tail)?;
         Ok((tail, (value1, value2)))
     }
 }
