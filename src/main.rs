@@ -49,13 +49,14 @@ fn parse_comma_tags<'input: 'tag, 'tag>(
 
 /***
 Accepts any parser we want.
+This function is called `separated` in `nom`.
 */
-fn parse_separated<'i>(
-    mut parse_tag1: impl Parser<&'i str, &'i str, ()>,
-    mut parse_separator: impl Parser<&'i str, &'i str, ()>,
-    mut parse_tag2: impl Parser<&'i str, &'i str, ()>,
-) -> impl Parser<&'i str, (&'i str, &'i str), ()> {
-    move |input: &'i str| {
+fn parse_separated<Input, Output1, Output2, Separator, Error>(
+    mut parse_tag1: impl Parser<Input, Output1, Error>,
+    mut parse_separator: impl Parser<Input, Separator, Error>,
+    mut parse_tag2: impl Parser<Input, Output2, Error>,
+) -> impl Parser<Input, (Output1, Output2), Error> {
+    move |input| {
         let (tail, value1) = parse_tag1.parse(input)?;
         let (tail, _) = parse_separator.parse(tail)?;
         let (tail, value2) = parse_tag2.parse(tail)?;
