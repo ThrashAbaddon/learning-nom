@@ -64,13 +64,24 @@ fn parse_separated<Input, Output1, Output2, Separator, Error>(
     }
 }
 
+fn parse_bool(input: &str) -> IResult<&str, bool, ()> {
+    match parse_tag("true").parse(input) {
+        Ok((tail, _)) => Ok((tail, true)),
+        Err(nom::Err::Error(_err)) => match parse_tag("false").parse(input) {
+            Ok((tail, _)) => Ok((tail, false)),
+            Err(err) => Err(err),
+        },
+        Err(err) => Err(err),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{parse_comma_tags, parse_hello, parse_separated, parse_tag};
+    use crate::{parse_bool, parse_comma_tags, parse_hello, parse_separated, parse_tag};
     use nom::{Err, IResult, Parser};
 
     #[test]
-    fn test() {
+    fn test_parse_hello() {
         assert_eq!(parse_hello("Hello, World").unwrap(), (", World", "Hello"));
     }
 
@@ -83,7 +94,7 @@ mod tests {
     }
 
     #[test]
-    fn test_comma_tag() {
+    fn test_parse_comma_tag() {
         assert_eq!(
             parse_comma_tags("Hello", "World")
                 .parse("Hello, World!!")
@@ -101,5 +112,12 @@ mod tests {
             parse_hello_world.parse("Hello, World!!").unwrap(),
             ("!!", ("Hello", "World"))
         )
+    }
+
+    #[test]
+    fn test_parse_bool() {
+        assert_eq!(parse_bool("true, 1234").unwrap(), (", 1234", true));
+        assert_eq!(parse_bool("false bla").unwrap(), (" bla", false));
+        assert!(parse_bool("afasdlse").is_err());
     }
 }
