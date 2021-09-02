@@ -1,4 +1,5 @@
-use nom::{Err, IResult, Parser};
+use nom::error::ParseError;
+use nom::{IResult, Parser};
 
 fn main() {
     println!("Hello, world!");
@@ -75,9 +76,26 @@ fn parse_bool(input: &str) -> IResult<&str, bool, ()> {
     }
 }
 
+fn parse_either<Input: Clone, Output, E: ParseError<Input>>(
+    mut choice1: impl Parser<Input, Output, E>,
+    mut choice2: impl Parser<Input, Output, E>,
+) -> impl Parser<Input, Output, E> {
+    move |input: Input| match choice1.parse(input.clone()) {
+        Ok((tail, value)) => Ok((tail, value)),
+        Err(nom::Err::Error(err1)) => match choice2.parse(input) {
+            Ok(v) => Ok(v),
+            Err(nom::Err::Error(err2)) => Err(nom::Err::Error(err1.or(err2))),
+            Err(err) => Err(err),
+        },
+        Err(err) => Err(err),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{parse_bool, parse_comma_tags, parse_hello, parse_separated, parse_tag};
+    use crate::{
+        parse_bool, parse_comma_tags, parse_either, parse_hello, parse_separated, parse_tag,
+    };
     use nom::{Err, IResult, Parser};
 
     #[test]
@@ -119,5 +137,18 @@ mod tests {
         assert_eq!(parse_bool("true, 1234").unwrap(), (", 1234", true));
         assert_eq!(parse_bool("false bla").unwrap(), (" bla", false));
         assert!(parse_bool("afasdlse").is_err());
+    }
+
+    #[test]
+    fn test_parse_either() {
+        let mut parse_bool_str = parse_either(parse_tag("true"), parse_tag("false"));
+        assert_eq!(
+            parse_bool_str.parse("true, 1234").unwrap(),
+            (", 1234", "true")
+        );
+        assert_eq!(
+            parse_bool_str.parse("false bla").unwrap(),
+            (" bla", "false")
+        );
     }
 }
